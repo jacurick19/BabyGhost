@@ -38,7 +38,7 @@ char * secret = "The Magic Words are Sqeamish Ossifraggee";
 uint8_t temp = 0; /* Used so compiler won’t optimize out victim_function() */
 
 void victim_function(size_t x, size_t y, size_t z) {
-  if ((x & y & ~z)) {
+  if ((z & y & ~x)) {
     temp &= array2[array1[x] * 512];
   }
 }
