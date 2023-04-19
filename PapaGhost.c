@@ -38,8 +38,9 @@ char * secret = "The Magic Words are Sqeamish Ossifraggee";
 uint8_t temp = 0; /* Used so compiler won’t optimize out victim_function() */
 
 void victim_function(size_t x, size_t y) {
-  if (((x  + y < array1_size) & ~y)) {
-    temp &= array2[array1[x + y] * 512];
+  if (((x+y < array1_size))) {
+    if(x == y)
+        temp &= array2[0];
   }
 }
 
@@ -157,7 +158,7 @@ int main(int argc,
   size_t this_too[12];
   size_t input_var;
 
-  printf("Welcome to PapaGhost\n");
+  printf("Welcome to PappaGhost\n");
   printf("In these series of assignments, you will be exploring the Spectre Vulnerability\n");
   printf("Please give the name of a file containing 480 lines. Lines will be passed, two at a time, to the vulnerable function. \n");
   printf("But first, here is your christmas present: %p\n%p\n", (void *)secret, (char * ) array1);
