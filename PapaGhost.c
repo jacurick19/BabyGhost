@@ -39,7 +39,7 @@ uint8_t temp = 0; /* Used so compiler won’t optimize out victim_function() */
 
 void victim_function(size_t x, size_t y) {
   if (((x+y < array1_size))) {
-    if(x == y)
+    if(array1[x] == y)
         temp &= array2[0];
   }
 }
