@@ -140,7 +140,6 @@ void readMemoryByte(size_t inputs[12], uint8_t value[2], int score[2]) {
 
 int main(int argc,
   const char * * argv) {
-  size_t malicious_x = (size_t)(secret - (char * ) array1); /* default for malicious_x */
   int i, score[2], len;
   uint8_t value[2];
   size_t x[MAX_LINES];
